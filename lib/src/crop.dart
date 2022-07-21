@@ -2,10 +2,8 @@ part of image_crop;
 
 const _kCropGridColumnCount = 3;
 const _kCropGridRowCount = 3;
-const _kCropGridColor = Color.fromRGBO(0xd0, 0xd0, 0xd0, 0.9);
 const _kCropOverlayActiveOpacity = 0.3;
 const _kCropOverlayInactiveOpacity = 0.7;
-const _kCropHandleColor = Color.fromRGBO(0xd0, 0xd0, 0xd0, 1.0);
 const _kCropHandleSize = 10.0;
 const _kCropHandleHitSize = 48.0;
 const _kCropMinFraction = 0.1;
@@ -18,6 +16,8 @@ class Crop extends StatefulWidget {
   final double? aspectRatio;
   final double maximumScale;
   final bool alwaysShowGrid;
+  final Color cropGridColor;
+  final Color cropHandleColor;
   final ImageErrorListener? onImageError;
 
   const Crop({
@@ -27,6 +27,8 @@ class Crop extends StatefulWidget {
     this.maximumScale = 2.0,
     this.alwaysShowGrid = false,
     this.onImageError,
+    this.cropGridColor = const Color.fromRGBO(0, 132, 114, 0.9),
+    this.cropHandleColor = const Color.fromRGBO(0, 132, 114, 1.0),
   }) : super(key: key);
 
   Crop.file(
@@ -37,6 +39,8 @@ class Crop extends StatefulWidget {
     this.maximumScale = 2.0,
     this.alwaysShowGrid = false,
     this.onImageError,
+    this.cropGridColor = const Color.fromRGBO(0, 132, 114, 0.9),
+    this.cropHandleColor = const Color.fromRGBO(0, 132, 114, 1.0),
   })  : image = FileImage(file, scale: scale),
         super(key: key);
 
@@ -49,6 +53,8 @@ class Crop extends StatefulWidget {
     this.maximumScale = 2.0,
     this.alwaysShowGrid = false,
     this.onImageError,
+    this.cropGridColor = const Color.fromRGBO(0, 132, 114, 0.9),
+    this.cropHandleColor = const Color.fromRGBO(0, 132, 114, 1.0),
   })  : image = AssetImage(assetName, bundle: bundle, package: package),
         super(key: key);
 
@@ -60,8 +66,6 @@ class Crop extends StatefulWidget {
 }
 
 class CropState extends State<Crop> with TickerProviderStateMixin, Drag {
-  final _surfaceKey = GlobalKey();
-
   late final AnimationController _activeController;
   late final AnimationController _settleController;
 
@@ -179,7 +183,6 @@ class CropState extends State<Crop> with TickerProviderStateMixin, Drag {
           onPointerDown: (event) => pointers++,
           onPointerUp: (event) => pointers = 0,
           child: GestureDetector(
-            key: _surfaceKey,
             behavior: HitTestBehavior.opaque,
             onScaleStart: _isEnabled ? _handleScaleStart : null,
             onScaleUpdate: _isEnabled ? _handleScaleUpdate : null,
@@ -192,6 +195,8 @@ class CropState extends State<Crop> with TickerProviderStateMixin, Drag {
                 area: _area,
                 scale: _scale,
                 active: _activeController.value,
+                cropGridColor: widget.cropGridColor,
+                cropHandleColor: widget.cropHandleColor,
               ),
             ),
           ),
@@ -217,11 +222,6 @@ class CropState extends State<Crop> with TickerProviderStateMixin, Drag {
   }
 
   Size? get _boundaries {
-    final context = _surfaceKey.currentContext;
-    if (context == null) {
-      return null;
-    }
-
     final size = context.size;
     if (size == null) {
       return null;
@@ -231,11 +231,6 @@ class CropState extends State<Crop> with TickerProviderStateMixin, Drag {
   }
 
   Offset? _getLocalPoint(Offset point) {
-    final context = _surfaceKey.currentContext;
-    if (context == null) {
-      return null;
-    }
-
     final box = context.findRenderObject() as RenderBox;
 
     return box.globalToLocal(point);
@@ -295,12 +290,11 @@ class CropState extends State<Crop> with TickerProviderStateMixin, Drag {
   }
 
   void _updateImage(ImageInfo imageInfo, bool synchronousCall) {
-    final boundaries = _boundaries;
-    if (boundaries == null) {
-      return;
-    }
-
     WidgetsBinding.instance?.addPostFrameCallback((timeStamp) {
+      final boundaries = _boundaries;
+      if (boundaries == null) {
+        return;
+      }
       final image = imageInfo.image;
 
       setState(() {
@@ -624,6 +618,8 @@ class _CropPainter extends CustomPainter {
   final Rect area;
   final double scale;
   final double active;
+  final Color cropGridColor;
+  final Color cropHandleColor;
 
   _CropPainter({
     required this.image,
@@ -632,6 +628,8 @@ class _CropPainter extends CustomPainter {
     required this.area,
     required this.scale,
     required this.active,
+    required this.cropGridColor,
+    required this.cropHandleColor,
   });
 
   @override
@@ -713,7 +711,7 @@ class _CropPainter extends CustomPainter {
   void _drawHandles(Canvas canvas, Rect boundaries) {
     final paint = Paint()
       ..isAntiAlias = true
-      ..color = _kCropHandleColor;
+      ..color = cropHandleColor;
 
     canvas.drawOval(
       Rect.fromLTWH(
@@ -761,7 +759,7 @@ class _CropPainter extends CustomPainter {
 
     final paint = Paint()
       ..isAntiAlias = false
-      ..color = _kCropGridColor.withOpacity(_kCropGridColor.opacity * active)
+      ..color = cropGridColor.withOpacity(cropGridColor.opacity * active)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.0;
 
